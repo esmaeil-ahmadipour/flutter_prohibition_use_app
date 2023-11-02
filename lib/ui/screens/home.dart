@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_prohibition_use_app/ui/fail_widget.dart';
-import 'package:flutter_prohibition_use_app/ui/succeed_widget.dart';
 import 'package:flutter_prohibition_use_app/util/constants.dart';
 import 'package:flutter_prohibition_use_app/util/ip_from_iran.dart';
 import 'package:flutter_prohibition_use_app/ui/loading_widget.dart';
 import 'package:get_ip_address/get_ip_address.dart';
+import 'package:go_router/go_router.dart';
 
 ///# [HomePage] Class Documentation
 /// A Flutter widget representing the main page of the application.
@@ -20,7 +19,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   /// A [_streamController] for managing the IP stream.
   late final StreamController<String> _streamController =
       StreamController<String>();
@@ -38,19 +36,25 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.blue,
       body: Center(
         child: StreamBuilder<String>(
           stream: _ipStream,
           builder: (context, snapshot) {
             if (snapshot.hasData) {
-              return isUserIPInRange(snapshot.data!, iranIpList)
-                  ? const FailWidget()
-                  : const SucceedWidget();
+              if (isUserIPInRange(snapshot.data!, iranIpList)) {
+                Future.delayed(const Duration(seconds: 0), () {
+                  context.goNamed(failScreenRoute);
+                });
+              } else {
+                Future.delayed(const Duration(seconds: 0), () {
+                  context.goNamed(succeedScreenRoute);
+                });
+              }
             }
             if (snapshot.hasError) {
               if ("${snapshot.error}" == networkError) {
                 restartStream();
-                return const LoadingWidget();
               }
             }
             return const LoadingWidget();
@@ -82,7 +86,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-
   ///# [ipStream] Method Documentation
   /// Generate an IP stream.
   ///
@@ -99,11 +102,16 @@ class _HomePageState extends State<HomePage> {
           restartStream();
         }
       }
-      if(currentIP!=null) {
+      if (currentIP != null) {
         yield currentIP;
       }
       await Future.delayed(const Duration(seconds: 1));
     }
   }
-}
 
+  @override
+  void dispose() {
+    _streamController.close();
+    super.dispose();
+  }
+}
